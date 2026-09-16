@@ -1,1 +1,71 @@
-# conventional-release-labels
+[![StepSecurity Maintained Action](https://raw.githubusercontent.com/step-security/maintained-actions-assets/main/assets/maintained-action-banner.png)](https://docs.stepsecurity.io/actions/stepsecurity-maintained-actions)
+
+# Conventional Release Labels
+
+Action that automatically adds labels to pull requests based on [Conventional Commits](https://conventionalcommits.org). These labels can be used in conjunction GitHub's
+[automatically generated release notes](https://docs.github.com/en/repositories/releasing-projects-on-github/automatically-generated-release-notes):
+
+<img width="675" src="./screenshot.png">
+
+## Setting up action
+
+Create a `.github/workflows/conventional-label.yaml`:
+
+```yaml
+# Warning, do not check out untrusted code with
+# the pull_request_target event.
+on:
+  pull_request_target:
+    types: [ opened, edited ]
+name: conventional-release-labels
+jobs:
+  label:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: step-security/conventional-release-labels@v1
+```
+
+Create a `.github/release.yaml`:
+
+```yaml
+changelog:
+  exclude:
+    labels:
+      - ignore-for-release
+    authors:
+      - octocat
+  categories:
+    - title: Breaking Changes 🛠
+      labels:
+        - breaking
+    - title: Exciting New Features 🎉
+      labels:
+        - feature
+    - title: Fixes 🔧
+      labels:
+        - fix
+    - title: Other Changes
+      labels:
+        - "*"
+```
+
+## Configuration
+
+| input | description |
+|:---:|---|
+| `token` | A GitHub secret token, the action defaults to using the special, default: `secrets.GITHUB_TOKEN` |
+| `type_labels` | Mapping from Conventional Commit `types` to pull request labels, default: `{"feat": "feature", "fix": "fix", "breaking": "breaking"}` |
+| `ignored_types` | Conventional commit types that should have `ignore_label` applied, default: `["chore"]` |
+| `ignore_label` | label to apply for ignored commits, default: `ignore-for-release` |
+
+Enjoy 🎉
+
+## Related Tools
+
+| tool | description |
+|:---:|---|
+| [release-please-action](https://github.com/step-security/release-please-action)   |  Fully automated releases with Conventional Commits |
+
+## License
+
+Apache Version 2.0

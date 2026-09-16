@@ -1,0 +1,64 @@
+const { beforeEach, describe, it, afterEach } = require('mocha')
+const api = require('../index.js')
+const core = require('@actions/core')
+const fs = require('fs')
+const sinon = require('sinon')
+const yaml = require('js-yaml')
+
+const sandbox = sinon.createSandbox()
+
+const metadata = yaml.load(fs.readFileSync('./action.yml', 'utf8'))
+
+let originalEventPath
+
+describe('conventional-release-labels', () => {
+  beforeEach(() => {
+    originalEventPath = process.env.GITHUB_EVENT_PATH
+    sandbox.replace(core, 'getInput', (key) => {
+      return metadata.inputs[key].default
+    })
+  })
+  afterEach(() => {
+    process.env.GITHUB_EVENT_PATH = originalEventPath
+    sandbox.restore()
+  })
+  it('handles unconventional commit', async () => {
+    const addLabels = sandbox.stub(api, 'addLabels').resolves(undefined)
+    process.env.GITHUB_EVENT_PATH = './test/fixtures/unconventional.json'
+    await api.main()
+    sandbox.assert.notCalled(addLabels)
+  })
+  it('it adds feature label', async () => {
+    const addLabels = sandbox.stub(api, 'addLabels').resolves(undefined)
+    const removeLabel = sandbox.stub(api, 'removeLabel').resolves(undefined)
+    process.env.GITHUB_EVENT_PATH = './test/fixtures/feature.json'
+    await api.main()
+    sandbox.assert.calledWith(removeLabel, 'feature', sandbox.match.any)
+    sandbox.assert.calledWith(removeLabel, 'fix', sandbox.match.any)
+    sandbox.assert.calledWith(removeLabel, 'breaking', sandbox.match.any)
+    sandbox.assert.calledWith(removeLabel, 'ignore-for-release', sandbox.match.any)
+    sandbox.assert.calledWith(addLabels, ['feature'], sandbox.match.any)
+  })
+  it('it adds breaking label along with type', async () => {
+    const addLabels = sandbox.stub(api, 'addLabels').resolves(undefined)
+    const removeLabel = sandbox.stub(api, 'removeLabel').resolves(undefined)
+    process.env.GITHUB_EVENT_PATH = './test/fixtures/breaking-fix.json'
+    await api.main()
+    sandbox.assert.calledWith(removeLabel, 'feature', sandbox.match.any)
+    sandbox.assert.calledWith(removeLabel, 'fix', sandbox.match.any)
+    sandbox.assert.calledWith(removeLabel, 'breaking', sandbox.match.any)
+    sandbox.assert.calledWith(removeLabel, 'ignore-for-release', sandbox.match.any)
+    sandbox.assert.calledWith(addLabels, ['breaking', 'fix'], sandbox.match.any)
+  })
+  it('it applies ignore label to list of ignored types', async () => {
+    const addLabels = sandbox.stub(api, 'addLabels').resolves(undefined)
+    const removeLabel = sandbox.stub(api, 'removeLabel').resolves(undefined)
+    process.env.GITHUB_EVENT_PATH = './test/fixtures/ignored.json'
+    await api.main()
+    sandbox.assert.calledWith(removeLabel, 'feature', sandbox.match.any)
+    sandbox.assert.calledWith(removeLabel, 'fix', sandbox.match.any)
+    sandbox.assert.calledWith(removeLabel, 'breaking', sandbox.match.any)
+    sandbox.assert.calledWith(removeLabel, 'ignore-for-release', sandbox.match.any)
+    sandbox.assert.calledWith(addLabels, ['ignore-for-release'], sandbox.match.any)
+  })
+})
